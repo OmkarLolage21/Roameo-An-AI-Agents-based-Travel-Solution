@@ -112,10 +112,11 @@ def get_location_coordinates(location_name: str) -> str:
         return f"Error getting coordinates: {str(e)}. Try another location name or format."
 class InteractiveTravelAgent:
     def __init__(self):
+        api_key_groq = os.getenv("GROQ_API_KEY")
         self.agent = Agent(
             model=Groq(
                 id="llama-3.3-70b-versatile",
-                api_key="",
+                api_key={api_key_groq},
                 max_tokens=10000
             ),
             markdown=True,

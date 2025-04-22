@@ -183,7 +183,7 @@ export default function TravelSearch() {
               name="travel_type" 
               value={searchParams.travel_type} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded"
+              className="bg-gray-50 w-full p-2 border rounded"
             >
               <option value="flight">Flight</option>
               <option value="train">Train</option>
@@ -198,7 +198,7 @@ export default function TravelSearch() {
               name="origin" 
               value={searchParams.origin} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded" 
+              className="bg-gray-50 w-full p-2 border rounded" 
               placeholder="City or airport" 
               required 
             />
@@ -210,7 +210,7 @@ export default function TravelSearch() {
               name="destination" 
               value={searchParams.destination} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded" 
+              className="bg-gray-50 w-full p-2 border rounded" 
               placeholder="City or airport" 
               required 
             />
@@ -222,7 +222,7 @@ export default function TravelSearch() {
               name="date" 
               value={searchParams.date} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded" 
+              className="bg-gray-50 w-full p-2 border rounded" 
               required 
             />
           </div>
@@ -233,7 +233,7 @@ export default function TravelSearch() {
               name="return_date" 
               value={searchParams.return_date || ''} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded" 
+              className="bg-gray-50 w-full p-2 border rounded" 
             />
           </div>
           <div>
@@ -244,7 +244,7 @@ export default function TravelSearch() {
               min="1" 
               value={searchParams.num_travelers} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded" 
+              className="bg-gray-50 w-full p-2 border rounded" 
               required 
             />
           </div>
@@ -256,7 +256,7 @@ export default function TravelSearch() {
               min="0" 
               value={searchParams.max_price || ''} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded" 
+              className="bg-gray-50 w-full p-2 border rounded" 
               placeholder="Optional" 
             />
           </div>
@@ -270,7 +270,7 @@ export default function TravelSearch() {
               step="0.1" 
               value={searchParams.min_rating || ''} 
               onChange={handleChange} 
-              className="w-full p-2 border rounded" 
+              className="bg-gray-50 w-full p-2 border rounded" 
               placeholder="Optional (0-5)" 
             />
           </div>

@@ -2,13 +2,15 @@ from phi.agent import Agent
 from phi.model.groq import Groq
 from phi.utils.pprint import pprint_run_response
 from phi.tools.duckduckgo import DuckDuckGo
-
+from dotenv import load_dotenv
+import os
 class TravelOptionsFinder:
     def __init__(self):
+        api_key_groq = os.getenv("GROQ_API_KEY")
         self.agent = Agent(
             model=Groq(
                 id="llama-3.3-70b-versatile",
-                api_key="",
+                api_key={api_key_groq},
                 max_tokens=10000
             ),
             markdown=True,

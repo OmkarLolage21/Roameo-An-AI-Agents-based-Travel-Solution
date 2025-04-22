@@ -332,24 +332,19 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
     
     setMessages(prev => [...prev, userMessage]);
     
-    // Add user message to chat context
     await addToChatContext(input, 'user');
     
-    // Extract destination and duration from input
     const extractedDestination = extractDestination(input);
     const extractedDuration = extractDuration(input);
     
-    // If destination is different from current one, update it
     if (extractedDestination !== destination) {
       setDestination(extractedDestination);
     }
     
-    // If duration is specified, update it
     if (extractedDuration !== duration) {
       setDuration(extractedDuration);
     }
     
-    // Add loading message
     const loadingMessage: ChatMessage = {
       id: `msg-${Date.now()}-assistant`,
       role: 'assistant',
@@ -358,7 +353,6 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
     
     setMessages(prev => [...prev, loadingMessage]);
     
-    // Call suggest-places endpoint
     await suggestPlaces(extractedDestination, extractedDuration);
     
     setInput('');
