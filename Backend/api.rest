@@ -1,0 +1,181 @@
+### API Testing File for Travel API with Sessions
+### Use this file with the REST Client extension in VS Code or similar tools
+
+@baseUrl = http://localhost:5000
+@contentType = application/json
+
+### -----------------------------------------------------
+### Health Check
+### -----------------------------------------------------
+GET {{baseUrl}}/health
+
+### -----------------------------------------------------
+### Session Management
+### -----------------------------------------------------
+
+### Create a new session
+# @name createSession
+POST {{baseUrl}}/sessions
+Content-Type: {{contentType}}
+
+### Store the session ID from the response
+@sessionId = {{createSession.response.body.session_id}}
+
+### Get session information
+GET {{baseUrl}}/sessions/{{sessionId}}
+
+### List all active sessions
+GET {{baseUrl}}/sessions
+
+### -----------------------------------------------------
+### Travel Agent Endpoints
+### -----------------------------------------------------
+
+### Get coordinates for a location
+POST {{baseUrl}}/sessions/{{sessionId}}/coordinates
+Content-Type: {{contentType}}
+
+{
+    "location": "Ajanta Caves, maharashtra, India"
+}
+
+### Suggest places to visit
+# @name suggestPlaces
+POST {{baseUrl}}/sessions/{{sessionId}}/suggest-places
+Content-Type: {{contentType}}
+
+{
+    "destination": "water places in maharashtra, India",
+    "duration": "3 days"
+}
+
+### Select places to visit
+POST {{baseUrl}}/sessions/{{sessionId}}/select-places
+Content-Type: {{contentType}}
+
+{
+    "selected_places": "1, 3, 5"
+}
+
+### Suggest accommodations
+# @name suggestAccommodations
+POST {{baseUrl}}/sessions/{{sessionId}}/suggest-accommodations
+Content-Type: {{contentType}}
+
+### Select accommodation
+POST {{baseUrl}}/sessions/{{sessionId}}/select-accommodation
+Content-Type: {{contentType}}
+
+{
+    "selected_hotel": "2"
+}
+
+### Create itinerary
+# @name createItinerary
+POST {{baseUrl}}/sessions/{{sessionId}}/create-itinerary
+Content-Type: {{contentType}}
+
+### -----------------------------------------------------
+### Booking Agent Endpoints
+### -----------------------------------------------------
+
+### Find transportation options
+POST {{baseUrl}}/sessions/{{sessionId}}/find-transportation-options
+Content-Type: {{contentType}}
+
+{
+    "itinerary": "Trip to Paris: May 15-18, 2025\n- Paris (May 15-18): Visit Eiffel Tower, Louvre Museum, Notre-Dame Cathedral"
+}
+
+### Find accommodation options
+POST {{baseUrl}}/sessions/{{sessionId}}/find-accommodation-options
+Content-Type: {{contentType}}
+
+### Find local transportation
+POST {{baseUrl}}/sessions/{{sessionId}}/find-local-transportation
+Content-Type: {{contentType}}
+
+### Create comprehensive plan
+POST {{baseUrl}}/sessions/{{sessionId}}/create-comprehensive-plan
+Content-Type: {{contentType}}
+
+### -----------------------------------------------------
+### Chat and Context Management
+### -----------------------------------------------------
+
+### Add a chat message
+POST {{baseUrl}}/sessions/{{sessionId}}/chat
+Content-Type: {{contentType}}
+
+{
+    "source": "user",
+    "message": "I really liked the suggestions! Can we add a wine tasting tour too?",
+    "response": null
+}
+
+### Reset session context (keep chat history)
+POST {{baseUrl}}/sessions/{{sessionId}}/reset
+Content-Type: {{contentType}}
+
+### -----------------------------------------------------
+### Session Maintenance
+### -----------------------------------------------------
+
+### Clean up old sessions (older than 24 hours)
+POST {{baseUrl}}/cleanup-sessions
+Content-Type: {{contentType}}
+
+{
+    "hours": 24
+}
+
+### Delete a specific session
+DELETE {{baseUrl}}/sessions/{{sessionId}}
+
+### -----------------------------------------------------
+### Testing a complete travel planning flow
+### -----------------------------------------------------
+
+### Create a new session for a complete workflow test
+# @name createTestSession
+POST {{baseUrl}}/sessions
+Content-Type: {{contentType}}
+
+### Store the test session ID
+@testSessionId = {{createTestSession.response.body.session_id}}
+
+### 1. Suggest places for Tokyo
+POST {{baseUrl}}/sessions/{{testSessionId}}/suggest-places
+Content-Type: {{contentType}}
+
+{
+    "destination": "Tokyo, Japan",
+    "duration": "5 days"
+}
+
+### 2. Select places
+POST {{baseUrl}}/sessions/{{testSessionId}}/select-places
+Content-Type: {{contentType}}
+
+{
+    "selected_places": "1, 2, 4, 6"
+}
+
+### 3. Suggest accommodations
+POST {{baseUrl}}/sessions/{{testSessionId}}/suggest-accommodations
+Content-Type: {{contentType}}
+
+### 4. Select accommodation
+POST {{baseUrl}}/sessions/{{testSessionId}}/select-accommodation
+Content-Type: {{contentType}}
+
+{
+    "selected_hotel": "2"
+}
+
+### 5. Create itinerary
+POST {{baseUrl}}/sessions/{{testSessionId}}/create-itinerary
+Content-Type: {{contentType}}
+
+### 6. Get session info to see the full chat history and context
+GET {{baseUrl}}/sessions/{{testSessionId}}
