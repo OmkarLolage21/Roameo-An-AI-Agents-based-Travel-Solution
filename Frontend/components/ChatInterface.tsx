@@ -53,61 +53,20 @@ function DraggableItineraryItem({ item }: { item: ItineraryItem }) {
   );
 }
 
-function AttractionCard({ attraction }: { attraction: any }) {
-  // Function to safely display coordinates
-  const formatCoordinates = (coords: any) => {
-    if (Array.isArray(coords)) {
-      return coords.join(', ');
-    } else if (typeof coords === 'string') {
-      return coords;
-    } else if (coords && typeof coords === 'object') {
-      // If it's an object with lat/lng or latitude/longitude
-      const lat = coords.lat || coords.latitude;
-      const lng = coords.lng || coords.longitude;
-      if (lat !== undefined && lng !== undefined) {
-        return `${lat}, ${lng}`;
-      }
-    }
-    return 'Coordinates not available';
-  };
-
-  return (
-    <Card className="mb-3">
-      <CardContent className="p-3">
-        <h4 className="font-medium text-primary">{attraction.name}</h4>
-        {attraction.location_query && (
-          <div className="flex items-center text-sm text-muted-foreground gap-1 mt-1">
-            <MapPin className="h-3 w-3" />
-            <p>{attraction.location_query}</p>
-          </div>
-        )}
-        {attraction.description && (
-          <p className="text-sm mt-2">{attraction.description}</p>
-        )}
-        {attraction.coordinates && (
-          <div className="mt-2 text-xs bg-secondary p-2 rounded">
-            <span className="font-medium">Coordinates:</span> {formatCoordinates(attraction.coordinates)}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }: any) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'msg-1',
       role: 'assistant',
-      content: 'Hello! I can help you plan your trip to India. Tell me where you want to travel and for how long.'
+      content: 'Hello! I can help you plan your trip. Tell me where you want to travel and for how long.'
     }
   ]);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [attractions, setAttractions] = useState<any[]>([]);
+  const [attractions, setAttractions] = useState<ItineraryItem[]>([]);
   const [destination, setDestination] = useState('');
-  const [duration, setDuration] = useState('3 days'); // Default duration
+  const [duration, setDuration] = useState('3 days');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   // Create a new session when the component mounts
@@ -168,7 +127,6 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
 
   // Function to extract destination from user input
   const extractDestination = (input: string): string => {
-    // Try to extract destination from patterns like "I want to visit [destination]" or "Plan a trip to [destination]"
     const patterns = [
       /(?:plan|visit|travel to|go to|trip to|explore)\s+(?:the\s+)?([^.!?,]+)/i,
       /(?:in|about)\s+([^.!?,]+)/i,
@@ -182,7 +140,6 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
       }
     }
     
-    // Default to the input itself if no pattern matches
     return input.trim();
   };
 
@@ -192,27 +149,6 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
     const match = input.match(durationPattern);
     
     return match ? match[1] : '3 days';
-  };
-
-  // Parse coordinates from the backend response
-  const parseCoordinates = (coordsStr: string) => {
-    // Try to handle coordinates in the format [lat, lng] or similar
-    try {
-      // The response might be in the format "**Coordinates**: [lat, lng]"
-      const matched = coordsStr.match(/\[([^[\]]+)\]/);
-      if (matched && matched[1]) {
-        const parts = matched[1].split(',').map(part => parseFloat(part.trim()));
-        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-          return parts;
-        }
-      }
-      
-      // Fallback to returning the string
-      return coordsStr;
-    } catch (e) {
-      console.error('Error parsing coordinates:', e);
-      return coordsStr;
-    }
   };
 
   // Function to call the suggest-places endpoint
@@ -244,48 +180,17 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
           content: `I found some great places to visit in ${destination} for your ${duration} trip. Here are my suggestions:`
         };
         
-        setMessages(prev => [...prev, assistantMessage]);
-        
-        // Update attractions state with the data
-        if (data.attractions_with_coordinates && data.attractions_with_coordinates.length > 0) {
-          // Process attractions to ensure coordinates are properly formatted
-          const processedAttractions = data.attractions_with_coordinates.map((attraction: any) => ({
-            ...attraction,
-            coordinates: parseCoordinates(attraction.coordinates)
-          }));
-          
-          setAttractions(processedAttractions);
-          
-          // Extract descriptions from the suggestions text if they don't exist in the attractions
-          const descriptionPattern = new RegExp(`\\*\\*${destination}\\*\\*([^*]+)`, 'gi');
-          let matches;
-          const descriptions: Record<string, string> = {};
-          
-          while ((matches = descriptionPattern.exec(data.suggestions)) !== null) {
-            const locationName = matches[1].trim();
-            const nextSection = data.suggestions.indexOf('**', matches.index + matches[0].length);
-            if (nextSection !== -1) {
-              const description = data.suggestions.substring(
-                matches.index + matches[0].length,
-                nextSection
-              ).trim();
-              descriptions[locationName] = description;
-            }
-          }
-          
-          // Add descriptions to attractions
-          const attractionsWithDescriptions = processedAttractions.map((attraction: any) => {
-            if (!attraction.description && descriptions[attraction.name]) {
-              return {
-                ...attraction,
-                description: descriptions[attraction.name]
-              };
-            }
-            return attraction;
-          });
-          
-          setAttractions(attractionsWithDescriptions);
-        }
+        // Convert attractions to draggable items
+        const items: ItineraryItem[] = data.attractions_with_coordinates.map((attraction: any, index: number) => ({
+          id: `place-${index}-${Date.now()}`,
+          title: attraction.name,
+          description: attraction.description || '',
+          location: attraction.location_query,
+          type: 'attraction',
+          coordinates: parseCoordinates(attraction.coordinates)
+        }));
+
+        setAttractions(items);
         
         // Add the response to chat context
         await addToChatContext(
@@ -296,7 +201,6 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
       } else {
         console.error('Error suggesting places:', await response.text());
         
-        // Add error message
         const errorMessage: ChatMessage = {
           id: `msg-${Date.now()}-assistant`,
           role: 'assistant',
@@ -308,7 +212,6 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
     } catch (error) {
       console.error('Error suggesting places:', error);
       
-      // Add error message
       const errorMessage: ChatMessage = {
         id: `msg-${Date.now()}-assistant`,
         role: 'assistant',
@@ -318,6 +221,41 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Parse coordinates from the backend response
+  const parseCoordinates = (coordsStr: string) => {
+    try {
+      // Try to parse as JSON object first
+      const jsonMatch = coordsStr.match(/\{.*\}/);
+      if (jsonMatch) {
+        const coords = JSON.parse(jsonMatch[0]);
+        if (coords.latitude && coords.longitude) {
+          return {
+            longitude: parseFloat(coords.longitude),
+            latitude: parseFloat(coords.latitude)
+          };
+        }
+      }
+
+      // Try to parse as array [lat, lng]
+      const arrayMatch = coordsStr.match(/\[([^[\]]+)\]/);
+      if (arrayMatch && arrayMatch[1]) {
+        const parts = arrayMatch[1].split(',').map(part => parseFloat(part.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          return {
+            longitude: parts[1],
+            latitude: parts[0]
+          };
+        }
+      }
+
+      // Fallback to returning undefined
+      return undefined;
+    } catch (e) {
+      console.error('Error parsing coordinates:', e);
+      return undefined;
     }
   };
 
@@ -397,25 +335,17 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
                   </div>
                   
                   <p>{message.content}</p>
-                  
-                  {message.items && message.items.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {message.items.map(item => (
-                        <DraggableItineraryItem key={item.id} item={item} />
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
             
-            {/* Display attractions as cards after messages */}
+            {/* Display attractions as draggable items */}
             {attractions.length > 0 && (
               <div className="mt-4">
                 <h3 className="font-medium mb-2">Suggested Places in {destination}:</h3>
                 <div className="space-y-2">
-                  {attractions.map((attraction, index) => (
-                    <AttractionCard key={`${attraction.name}-${index}`} attraction={attraction} />
+                  {attractions.map((item) => (
+                    <DraggableItineraryItem key={item.id} item={item} />
                   ))}
                 </div>
               </div>

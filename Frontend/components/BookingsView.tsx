@@ -6,6 +6,7 @@ import Spinner from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { Itinerary } from '@/types/itinerary';
 import { Plane, Hotel, Bus, Globe, RefreshCw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface BookingsViewProps {
   itineraries: Itinerary[];
@@ -15,7 +16,12 @@ interface BookingsViewProps {
 
 export default function BookingsView({ itineraries, activeItinerary, sessionId }: BookingsViewProps) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState<boolean>(false);
+  // Separate loading states for each tab
+  const [transportationLoading, setTransportationLoading] = useState<boolean>(false);
+  const [accommodationLoading, setAccommodationLoading] = useState<boolean>(false);
+  const [localTransportLoading, setLocalTransportLoading] = useState<boolean>(false);
+  const [comprehensivePlanLoading, setComprehensivePlanLoading] = useState<boolean>(false);
+  
   const [bookingTab, setBookingTab] = useState<string>('transportation');
   const [transportationOptions, setTransportationOptions] = useState<string>('');
   const [accommodationOptions, setAccommodationOptions] = useState<string>('');
@@ -35,7 +41,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
       return;
     }
 
-    setLoading(true);
+    setTransportationLoading(true);
     try {
       const response = await fetch(`http://localhost:5000/sessions/${sessionId}/find-transportation-options`, {
         method: 'POST',
@@ -65,7 +71,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setTransportationLoading(false);
     }
   };
 
@@ -80,7 +86,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
       return;
     }
 
-    setLoading(true);
+    setAccommodationLoading(true);
     try {
       const response = await fetch(`http://localhost:5000/sessions/${sessionId}/find-accommodation-options`, {
         method: 'POST',
@@ -110,7 +116,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setAccommodationLoading(false);
     }
   };
 
@@ -125,7 +131,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
       return;
     }
 
-    setLoading(true);
+    setLocalTransportLoading(true);
     try {
       const response = await fetch(`http://localhost:5000/sessions/${sessionId}/find-local-transportation`, {
         method: 'POST',
@@ -155,7 +161,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setLocalTransportLoading(false);
     }
   };
 
@@ -170,7 +176,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
       return;
     }
 
-    setLoading(true);
+    setComprehensivePlanLoading(true);
     try {
       const response = await fetch(`http://localhost:5000/sessions/${sessionId}/create-comprehensive-plan`, {
         method: 'POST',
@@ -200,7 +206,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setComprehensivePlanLoading(false);
     }
   };
 
@@ -209,11 +215,101 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
     setBookingTab(value);
   };
 
+  // Format JSON response to readable markdown
+  // More comprehensive filter for various debug outputs
+const formatResponse = (content: string) => {
+  try {
+    // Define patterns for debugging output
+    const debugPatterns = [
+      /Running:/i,
+      /duckduckgo_search\(/i,
+      /google_search\(/i,
+      /search_query:/i,
+      /^Searching for:/i,
+      /^Found \d+ results/i
+    ];
+    
+    // Filter out lines matching any debug pattern
+    const cleanedContent = content
+      .split('\n')
+      .filter(line => !debugPatterns.some(pattern => pattern.test(line)))
+      .join('\n');
+    
+    // Remove any leading empty lines after filtering
+    const trimmedContent = cleanedContent.replace(/^\s*\n*/g, '');
+    
+    // Try parsing as JSON
+    try {
+      const jsonData = JSON.parse(trimmedContent);
+      return convertJsonToMarkdown(jsonData);
+    } catch (e) {
+      // If not valid JSON, return the cleaned content
+      return trimmedContent;
+    }
+  } catch (e) {
+    // Fallback to original content if any errors
+    return content;
+  }
+};
+
+  // Function to convert JSON to markdown
+  const convertJsonToMarkdown = (json: any): string => {
+    if (typeof json === 'string') {
+      return json;
+    }
+    
+    // Format different types of response data
+    let markdown = '';
+    
+    // Handle arrays of options
+    if (Array.isArray(json)) {
+      json.forEach((item, index) => {
+        markdown += `## Option ${index + 1}\n\n`;
+        
+        if (item.name) markdown += `### ${item.name}\n\n`;
+        if (item.type) markdown += `**Type**: ${item.type}\n\n`;
+        if (item.price) markdown += `**Price**: ${item.price}\n\n`;
+        if (item.description) markdown += `${item.description}\n\n`;
+        
+        // Add other fields as needed
+        Object.entries(item).forEach(([key, value]) => {
+          if (!['name', 'type', 'price', 'description'].includes(key)) {
+            markdown += `**${key.charAt(0).toUpperCase() + key.slice(1)}**: ${value}\n\n`;
+          }
+        });
+        
+        markdown += '---\n\n';
+      });
+      return markdown;
+    }
+    
+    // Handle single object
+    if (typeof json === 'object') {
+      Object.entries(json).forEach(([key, value]) => {
+        if (key === 'options' && Array.isArray(value)) {
+          markdown += `## Available Options\n\n`;
+          markdown += convertJsonToMarkdown(value);
+        } else if (key === 'summary' || key === 'recommendations') {
+          markdown += `## ${key.charAt(0).toUpperCase() + key.slice(1)}\n\n`;
+          markdown += `${value}\n\n`;
+        } else {
+          markdown += `### ${key.charAt(0).toUpperCase() + key.slice(1)}\n\n`;
+          markdown += `${value}\n\n`;
+        }
+      });
+      return markdown;
+    }
+    
+    return content;
+  };
+
   // Helper function to render markdown content
   const renderMarkdown = (content: string) => {
-    // This is a simple renderer - in a real app, you'd use a markdown library
+    const markdown = formatResponse(content);
     return (
-      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content }} />
+      <div className="prose prose-sm max-w-none dark:prose-invert">
+        <ReactMarkdown>{markdown}</ReactMarkdown>
+      </div>
     );
   };
 
@@ -265,9 +361,9 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   size="sm" 
                   variant="outline" 
                   onClick={fetchTransportationOptions}
-                  disabled={loading}
+                  disabled={transportationLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 mr-2 ${transportationLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </CardTitle>
@@ -276,7 +372,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {transportationLoading ? (
                 <div className="flex justify-center p-12">
                   <Spinner size="lg" />
                 </div>
@@ -290,7 +386,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   <Button 
                     onClick={fetchTransportationOptions} 
                     className="mt-4"
-                    disabled={loading}
+                    disabled={transportationLoading}
                   >
                     Find Transportation Options
                   </Button>
@@ -309,9 +405,9 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   size="sm" 
                   variant="outline" 
                   onClick={fetchAccommodationOptions}
-                  disabled={loading}
+                  disabled={accommodationLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 mr-2 ${accommodationLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </CardTitle>
@@ -320,7 +416,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {accommodationLoading ? (
                 <div className="flex justify-center p-12">
                   <Spinner size="lg" />
                 </div>
@@ -334,7 +430,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   <Button 
                     onClick={fetchAccommodationOptions} 
                     className="mt-4"
-                    disabled={loading}
+                    disabled={accommodationLoading}
                   >
                     Find Accommodation Options
                   </Button>
@@ -353,9 +449,9 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   size="sm" 
                   variant="outline" 
                   onClick={fetchLocalTransportOptions}
-                  disabled={loading}
+                  disabled={localTransportLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 mr-2 ${localTransportLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </CardTitle>
@@ -364,7 +460,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {localTransportLoading ? (
                 <div className="flex justify-center p-12">
                   <Spinner size="lg" />
                 </div>
@@ -378,7 +474,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   <Button 
                     onClick={fetchLocalTransportOptions} 
                     className="mt-4"
-                    disabled={loading}
+                    disabled={localTransportLoading}
                   >
                     Find Local Transport Options
                   </Button>
@@ -397,9 +493,9 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   size="sm" 
                   variant="outline" 
                   onClick={createComprehensivePlan}
-                  disabled={loading}
+                  disabled={comprehensivePlanLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 mr-2 ${comprehensivePlanLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </CardTitle>
@@ -408,7 +504,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {comprehensivePlanLoading ? (
                 <div className="flex justify-center p-12">
                   <Spinner size="lg" />
                 </div>
@@ -422,7 +518,7 @@ export default function BookingsView({ itineraries, activeItinerary, sessionId }
                   <Button 
                     onClick={createComprehensivePlan} 
                     className="mt-4"
-                    disabled={loading}
+                    disabled={comprehensivePlanLoading}
                   >
                     Create Comprehensive Plan
                   </Button>

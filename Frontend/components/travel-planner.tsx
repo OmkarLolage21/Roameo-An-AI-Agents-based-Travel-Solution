@@ -10,73 +10,55 @@ import { MapIcon, ListTodo, CalendarDays, DollarSign, Save, LogOut, Plane } from
 import ItineraryBoard from '@/components/itinerary-board';
 import ChatInterface from '@/components/ChatInterface';
 import MapView from '@/components/MapView';
-import BookingsView from '@/components/BookingsView'; // Import the new component
+import BookingsView from '@/components/BookingsView';
 import { Itinerary, ItineraryItem } from '@/types/itinerary';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-// Hardcoded Katraj, Pune coordinates
-const KATRAJ_CENTER: [number, number] = [73.8567, 18.4529];
-const KATRAJ_RADIUS = 30; // 30km radius
-
-const HARDCODED_PLACES = {
-  'natural places': [
-    {
-      name: "Katraj Lake",
-      coordinates: [73.8627, 18.4485],
-      description: "Beautiful lake surrounded by hills"
-    },
-    {
-      name: "Rajiv Gandhi Zoological Park",
-      coordinates: [73.8521, 18.4483],
-      description: "Zoo and wildlife park"
-    },
-    {
-      name: "Taljai Hill",
-      coordinates: [73.8422, 18.4844],
-      description: "Scenic hilltop with panoramic views"
-    },
-    {
-      name: "Katraj Ghat",
-      coordinates: [73.8567, 18.4429],
-      description: "Mountain pass with lush greenery"
-    }
-  ],
-  'restaurants': [
-    {
-      name: "Hotel Shreyas",
-      coordinates: [73.8511, 18.4578],
-      description: "Traditional Maharashtrian cuisine"
-    },
-    {
-      name: "Dine Divine",
-      coordinates: [73.8598, 18.4501],
-      description: "Multi-cuisine family restaurant"
-    }
-  ],
-  'temples': [
-    {
-      name: "Chaturshringi Temple",
-      coordinates: [73.8234, 18.4677],
-      description: "Ancient temple on hilltop"
-    },
-    {
-      name: "Parvati Temple",
-      coordinates: [73.8511, 18.4955],
-      description: "Historic temple complex"
-    }
-  ]
-};
-
 async function geocodeLocation(location: string): Promise<{ longitude: number; latitude: number } | null> {
-  // For demo, return hardcoded coordinates for common locations
-  const locations: { [key: string]: { longitude: number; latitude: number } } = {
-    "Taj Mahal": { longitude: 78.0421, latitude: 27.1751 },
-    "Katraj Lake": { longitude: 73.8627, latitude: 18.4485 },
-    "Rajiv Gandhi Zoological Park": { longitude: 73.8521, latitude: 18.4483 }
-  };
-  
-  return locations[location] || null;
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(location)}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+    );
+    const data = await response.json();
+    
+    if (data.features && data.features.length > 0) {
+      const [longitude, latitude] = data.features[0].center;
+      return { longitude, latitude };
+    }
+  } catch (error) {
+    console.error('Geocoding error:', error);
+  }
+  return null;
+}
+
+async function searchPlaces(query: string, center: [number, number], radius: number) {
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+      `proximity=${center[0]},${center[1]}&` +
+      `types=poi&` +
+      `limit=10&` +
+      `access_token=${MAPBOX_TOKEN}`
+    );
+    const data = await response.json();
+    return data.features
+      .filter((feature: any) => {
+        const distance = calculateDistance(
+          center,
+          [feature.center[0], feature.center[1]]
+        );
+        return distance <= radius;
+      })
+      .map((feature: any) => ({
+        name: feature.place_name,
+        coordinates: feature.center as [number, number],
+        description: feature.properties?.category || feature.place_type.join(', ')
+      }));
+  } catch (error) {
+    console.error('Place search error:', error);
+    return [];
+  }
 }
 
 function calculateDistance(point1: [number, number], point2: [number, number]): number {
@@ -94,32 +76,6 @@ function calculateDistance(point1: [number, number], point2: [number, number]): 
   return R * c;
 }
 
-async function searchPlaces(query: string, center: [number, number], radius: number) {
-  // For demo, return hardcoded places based on query
-  const queryLower = query.toLowerCase();
-  let places = [];
-  
-  if (queryLower.includes('natural') || queryLower.includes('nature')) {
-    places = HARDCODED_PLACES['natural places'];
-  } else if (queryLower.includes('restaurant') || queryLower.includes('food')) {
-    places = HARDCODED_PLACES['restaurants'];
-  } else if (queryLower.includes('temple') || queryLower.includes('religious')) {
-    places = HARDCODED_PLACES['temples'];
-  } else {
-    // Return all places as default
-    places = [
-      ...HARDCODED_PLACES['natural places'],
-      ...HARDCODED_PLACES['restaurants'],
-      ...HARDCODED_PLACES['temples']
-    ];
-  }
-
-  return places.filter(place => {
-    const distance = calculateDistance(center, place.coordinates);
-    return distance <= radius;
-  });
-}
-
 export default function TravelPlanner() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('map');
@@ -130,10 +86,7 @@ export default function TravelPlanner() {
   const [searchArea, setSearchArea] = useState<{
     center: [number, number];
     radius: number;
-  }>({
-    center: KATRAJ_CENTER,
-    radius: KATRAJ_RADIUS
-  });
+  } | undefined>(undefined);
   const [suggestedPlaces, setSuggestedPlaces] = useState<Array<{
     name: string;
     coordinates: [number, number];
@@ -149,7 +102,6 @@ export default function TravelPlanner() {
     })
   );
 
-  // Create a new session when component mounts
   const createSession = async () => {
     try {
       const response = await fetch('http://localhost:5000/sessions', {
@@ -171,7 +123,6 @@ export default function TravelPlanner() {
     }
   };
 
-  // Call createSession on component mount
   useState(() => {
     createSession();
   });
@@ -290,7 +241,6 @@ export default function TravelPlanner() {
   };
 
   const handleSave = async () => {
-    // Find the active itinerary
     const currentItinerary = itineraries.find(itinerary => itinerary.id === activeItinerary);
     
     if (!currentItinerary || !sessionId) {
@@ -303,7 +253,6 @@ export default function TravelPlanner() {
     }
     
     try {
-      // First, create the itinerary on the backend
       const response = await fetch(`http://localhost:5000/sessions/${sessionId}/create-itinerary`, {
         method: 'POST',
         headers: {
@@ -434,7 +383,7 @@ export default function TravelPlanner() {
         </div>
         
         <div className="lg:col-span-5">
-          <Card className="h-[calc(100vh-150px)] overflow-auto">
+          <Card className="h-[calc(100vh-220px)] overflow-auto">
             <ChatInterface 
               onSearch={handlePlaceSearch}
               searchArea={searchArea}

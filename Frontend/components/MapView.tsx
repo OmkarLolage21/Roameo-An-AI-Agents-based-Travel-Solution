@@ -255,7 +255,7 @@ export default function MapView({
             </div>
           </Marker>
         ))}
-        
+
         {selectedLocation && selectedLocation.coordinates && (
           <Popup
             longitude={selectedLocation.coordinates.longitude}
