@@ -300,7 +300,7 @@ const formatResponse = (content: string) => {
       return markdown;
     }
     
-    return content;
+    return '';
   };
 
   // Helper function to render markdown content
