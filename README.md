@@ -60,7 +60,7 @@ Roameo is a modular, service-oriented application with the following core compon
 
 <img width="1261" height="694" alt="image" src="https://github.com/user-attachments/assets/b9677ca4-34f2-454d-ac42-8b18bb0ee58b" />
 <img width="3197" height="1432" alt="image" src="https://github.com/user-attachments/assets/3afd14a0-d24a-4ef6-9340-1c856e363b4b" />
-
+Icons credit goes to respective owners
 
 ---
 
