@@ -1,6 +1,6 @@
 # Roameo: An AI Agents-based Travel Solution
 
-Roameo is an innovative travel solution platform powered by AI agents, designed to revolutionize the way users plan, book, and experience their travel journeys. The platform leverages advanced AI capabilities to provide personalized recommendations, automate travel workflows, and seamlessly integrate multiple travel services for a superior user experience.
+Roameo is an innovative travel solution platform powered by AI agents, designed to revolutionize the way users plan, book, and experience their travel journeys. The platform leverages advanced AI capabilities to provide personalized recommendations, automate travel workflows, new map search and seamlessly integrate multiple travel services for a superior user experience.
 
 ---
 
