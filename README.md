@@ -8,16 +8,11 @@ Roameo is an innovative travel solution platform powered by AI agents, designed 
 
 - [Introduction](#introduction)
 - [Features](#features)
-- [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [AI Agents & Capabilities](#ai-agents--capabilities)
-- [Directory Structure](#directory-structure)
 - [Setup & Installation](#setup--installation)
 - [Usage](#usage)
-- [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
-- [Acknowledgements](#acknowledgements)
 
 ---
 
@@ -56,61 +51,14 @@ Roameo is a modular, service-oriented application with the following core compon
 - **Database:** Stores user profiles, itineraries, and booking histories.
 - **External Integrations:** Connects to travel APIs (e.g., hotel, flight, activity providers).
 
-### High-Level Architecture Diagram
-
-<img width="1261" height="694" alt="image" src="https://github.com/user-attachments/assets/b9677ca4-34f2-454d-ac42-8b18bb0ee58b" />
-<img width="3197" height="1432" alt="image" src="https://github.com/user-attachments/assets/3afd14a0-d24a-4ef6-9340-1c856e363b4b" />
-Icons credit goes to respective owners
-
----
-
 ## Tech Stack
 
-- **Frontend:** TypeScript, React, Redux
+- **Frontend:** TypeScript,NextJS
 - **Backend:** Python, FastAPI
 - **AI/ML:** LangChain, OpenAI API, Custom ML models
 - **Database:** PostgreSQL or MongoDB (configurable)
 - **DevOps:** Docker, GitHub Actions
 - **Other:** RESTful APIs, WebSockets for real-time updates
-
----
-
-## AI Agents & Capabilities
-
-Roameo’s intelligence comes from a suite of AI agents, each specializing in a domain:
-
-- **Recommendation Agent:** Analyzes preferences, trends, and reviews.
-- **Planning Agent:** Builds itineraries, optimizes schedules.
-- **Booking Agent:** Automates reservations, handles payments.
-- **Support Agent:** Provides real-time help and answers questions.
-- **Negotiation Agent:** Facilitates group trip planning and consensus.
-
-Agents communicate via an orchestrator module, leveraging natural language processing and reasoning algorithms.
-
----
-
-## Directory Structure
-
-```
-Roameo-An-AI-Agents-based-Travel-Solution/
-├── frontend/                # TypeScript React app
-│   ├── src/
-│   ├── public/
-│   └── ...                 
-├── backend/                 # Python FastAPI app
-│   ├── agents/
-│   ├── api/
-│   ├── models/
-│   ├── database/
-│   └── ...
-├── docs/                    # Documentation
-├── scripts/                 # Utility scripts
-├── tests/                   # Test suites
-├── .github/                 # Workflows/CI
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
-```
 
 ---
 
@@ -125,27 +73,6 @@ Roameo-An-AI-Agents-based-Travel-Solution/
 - API keys for external integrations (OpenAI, travel APIs, etc.)
 
 ### Quick Start (Docker)
-
-1. **Clone the repository:**
-    ```bash
-    git clone https://github.com/OmkarLolage21/Roameo-An-AI-Agents-based-Travel-Solution.git
-    cd Roameo-An-AI-Agents-based-Travel-Solution
-    ```
-
-2. **Configure Environment Variables:**
-    - Copy `.env.example` to `.env` in both `frontend/` and `backend/` directories.
-    - Fill in required API keys and secrets.
-
-3. **Start the Application:**
-    ```bash
-    docker-compose up --build
-    ```
-
-4. **Access the App:**
-    - Frontend: [http://localhost:3000](http://localhost:3000)
-    - Backend API: [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
 
 ### Manual Setup (Local Development)
 
@@ -167,7 +94,7 @@ Roameo-An-AI-Agents-based-Travel-Solution/
 
 3. **Run the backend server:**
     ```bash
-    uvicorn main:app --reload
+    python app.py
     ```
 
 #### Frontend
@@ -186,7 +113,7 @@ Roameo-An-AI-Agents-based-Travel-Solution/
 
 3. **Start the frontend development server:**
     ```bash
-    npm start
+    npm run dev
     ```
 
 ---
@@ -199,15 +126,6 @@ Roameo-An-AI-Agents-based-Travel-Solution/
 - Book hotels, flights, and activities via integrated APIs.
 - Manage and update your trip on the dashboard.
 - Get real-time support and notifications.
-
----
-
-## Configuration
-
-- **API Keys:** Required for AI and travel API integration.
-- **Database Connection:** Configure in `backend/.env`.
-- **Frontend Endpoint URLs:** Configure in `frontend/.env`.
-- **Customizations:** Modify agent logic in `backend/agents/`.
 
 ---
 
