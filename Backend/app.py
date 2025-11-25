@@ -8,6 +8,7 @@ import re
 # Import from the travel agent modules
 from geolocation import InteractiveTravelAgent, get_location_coordinates
 from bookingAgent import TravelOptionsFinder
+from liveItineraryAgent import LiveItineraryAgent
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -22,9 +23,12 @@ def create_new_session():
     sessions[session_id] = {
         "travel_agent": InteractiveTravelAgent(),
         "booking_agent": TravelOptionsFinder(),
+        "live_itinerary_agent": LiveItineraryAgent(),
         "chat_history": [],
         "created_at": datetime.now().isoformat(),
-        "last_active": datetime.now().isoformat()
+        "last_active": datetime.now().isoformat(),
+        "current_itinerary": None,
+        "current_location": None
     }
     return session_id
 
@@ -598,6 +602,167 @@ def add_chat_message(session_id):
     return jsonify({
         "message": "Chat message added successfully"
     }), 201
+
+@app.route('/sessions/<session_id>/update-mood', methods=['POST'])
+def update_mood(session_id):
+    """Update current mood/state for live itinerary adjustments"""
+    session = get_session(session_id)
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+    
+    data = request.json
+    if not data or 'mood_state' not in data:
+        return jsonify({"error": "Mood state is required"}), 400
+    
+    mood_state = data['mood_state']
+    current_time = data.get('current_time', datetime.now().strftime("%H:%M"))
+    current_location = data.get('current_location', session.get('current_location', 'Current location'))
+    
+    # Update session with current state
+    session['current_mood'] = mood_state
+    session['current_time'] = current_time
+    session['current_location'] = current_location
+    
+    add_to_chat_history(session_id, "user", f"Mood update: {mood_state} at {current_time}")
+    update_session_activity(session_id)
+    
+    return jsonify({
+        "message": "Mood state updated successfully",
+        "mood_state": mood_state,
+        "current_time": current_time,
+        "current_location": current_location
+    }), 200
+
+@app.route('/sessions/<session_id>/adjust-itinerary', methods=['POST'])
+def adjust_itinerary(session_id):
+    """Dynamically adjust itinerary based on current mood and situation"""
+    session = get_session(session_id)
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+    
+    data = request.json
+    if not data or 'current_itinerary' not in data or 'mood_state' not in data:
+        return jsonify({"error": "Current itinerary and mood state are required"}), 400
+    
+    live_agent = session["live_itinerary_agent"]
+    current_itinerary = data['current_itinerary']
+    mood_state = data['mood_state']
+    current_time = data.get('current_time', datetime.now().strftime("%H:%M"))
+    current_location = data.get('current_location', session.get('current_location', 'Current location'))
+    
+    # Store current itinerary in session
+    session['current_itinerary'] = current_itinerary
+    
+    add_to_chat_history(session_id, "user", f"Request to adjust itinerary based on mood: {mood_state}")
+    
+    # Call the live itinerary agent to adjust the schedule
+    try:
+        result = live_agent.adjust_itinerary(
+            current_itinerary=current_itinerary,
+            mood_state=mood_state,
+            current_time=current_time,
+            current_location=current_location
+        )
+        
+        # Update session with the adjusted itinerary
+        session['current_itinerary'] = result.get('updated_schedule', current_itinerary)
+        
+        add_to_chat_history(session_id, "system", "Itinerary adjusted", result)
+        update_session_activity(session_id)
+        
+        return jsonify({
+            "message": "Itinerary adjusted successfully",
+            "result": result
+        }), 200
+        
+    except Exception as e:
+        add_to_chat_history(session_id, "system", f"Error adjusting itinerary: {str(e)}")
+        return jsonify({
+            "error": "Failed to adjust itinerary",
+            "details": str(e)
+        }), 500
+
+@app.route('/sessions/<session_id>/find-alternatives', methods=['POST'])
+def find_alternatives(session_id):
+    """Find alternative venues near current location"""
+    session = get_session(session_id)
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+    
+    data = request.json
+    if not data or 'activity_type' not in data:
+        return jsonify({"error": "Activity type is required"}), 400
+    
+    live_agent = session["live_itinerary_agent"]
+    activity_type = data['activity_type']
+    location = data.get('location', session.get('current_location', 'Current location'))
+    radius_km = data.get('radius_km', 5)
+    mood_state = data.get('mood_state', session.get('current_mood', 'neutral'))
+    
+    add_to_chat_history(session_id, "user", f"Request alternatives for {activity_type} near {location}")
+    
+    try:
+        alternatives = live_agent.find_nearby_alternatives(
+            activity_type=activity_type,
+            location=location,
+            radius_km=radius_km,
+            mood_state=mood_state
+        )
+        
+        add_to_chat_history(session_id, "system", "Found alternatives", alternatives)
+        update_session_activity(session_id)
+        
+        return jsonify({
+            "message": "Alternatives found successfully",
+            "alternatives": alternatives
+        }), 200
+        
+    except Exception as e:
+        add_to_chat_history(session_id, "system", f"Error finding alternatives: {str(e)}")
+        return jsonify({
+            "error": "Failed to find alternatives",
+            "details": str(e)
+        }), 500
+
+@app.route('/sessions/<session_id>/emergency-reroute', methods=['POST'])
+def emergency_reroute(session_id):
+    """Handle emergency rerouting situations"""
+    session = get_session(session_id)
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+    
+    data = request.json
+    if not data or 'current_situation' not in data or 'destination' not in data:
+        return jsonify({"error": "Current situation and destination are required"}), 400
+    
+    live_agent = session["live_itinerary_agent"]
+    current_situation = data['current_situation']
+    destination = data['destination']
+    urgency_level = data.get('urgency_level', 'high')
+    
+    add_to_chat_history(session_id, "user", f"Emergency reroute request: {current_situation}")
+    
+    try:
+        reroute_plan = live_agent.emergency_reroute(
+            current_situation=current_situation,
+            destination=destination,
+            urgency_level=urgency_level
+        )
+        
+        add_to_chat_history(session_id, "system", "Emergency reroute plan", reroute_plan)
+        update_session_activity(session_id)
+        
+        return jsonify({
+            "message": "Emergency reroute completed",
+            "reroute_plan": reroute_plan
+        }), 200
+        
+    except Exception as e:
+        add_to_chat_history(session_id, "system", f"Error with emergency reroute: {str(e)}")
+        return jsonify({
+            "error": "Failed to create emergency reroute",
+            "details": str(e)
+        }), 500
 
 @app.route('/cleanup-sessions', methods=['POST'])
 def cleanup_old_sessions():

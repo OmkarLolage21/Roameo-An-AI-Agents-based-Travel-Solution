@@ -10,6 +10,7 @@ from phi.tools.newspaper4k import Newspaper4k
 from dotenv import load_dotenv
 import os
 
+load_dotenv()
 class InteractiveTravelAgent:
     def __init__(self):
         api_key_groq = os.getenv("GROQ_API_KEY")
@@ -38,7 +39,7 @@ class InteractiveTravelAgent:
             instructions=[
                 """Your role is to guide the user through an interactive trip planning process with these steps:
                 
-                1. First, research and suggest popular attractions/places in the requested destination
+                1. First, research and suggest most popular attractions/places in the requested destination
                 2. Ask the user to select which places they're interested in visiting from your suggestions
                 3. Based on their selections, recommend hotels/accommodations in different budget ranges
                 4. Ask the user to select their preferred accommodation
@@ -90,7 +91,7 @@ class InteractiveTravelAgent:
         selected_places = self.context.get("selected_places", "")
         selected_hotel = self.context.get("selected_hotel", "")
         
-        query = f"""Create a detailed {duration} itinerary for {destination} including:
+        query = f"""Create a detailed {duration} itinerary for {destination} from Pune including:
         1. Day-by-day schedule visiting the places numbered {selected_places} that the user selected
         2. Accommodation at hotel option {selected_hotel}
         3. Transportation recommendations between attractions

@@ -19,12 +19,14 @@ export default function LoginPage() {
     try {
       setLoading(true);
       const response = await axios.post("/api/auth/login", { email, password });
-      toast.success("Login success");
-      router.push("/dashboard");
+      if (response.data.success) {
+        toast.success("Login successful!");
+        router.push("/dashboard");
+      }
     } catch (error: any) {
-      console.error("Login failed", error.message);
-      router.push("/login")
-      toast.error(error.message);
+      console.error("Login failed:", error);
+      const errorMessage = error.response?.data?.error || error.message || "Login failed. Please check your credentials.";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { MapIcon, ListTodo, CalendarDays, DollarSign, Save, LogOut, Plane } from 'lucide-react';
+import { MapIcon, ListTodo, CalendarDays, DollarSign, Save, LogOut, Plane, RefreshCw } from 'lucide-react';
 import ItineraryBoard from '@/components/itinerary-board';
 import ChatInterface from '@/components/ChatInterface';
 import MapView from '@/components/MapView';
 import BookingsView from '@/components/BookingsView';
+import LiveItineraryView from '@/components/LiveItineraryView';
 import { Itinerary, ItineraryItem } from '@/types/itinerary';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -104,11 +105,37 @@ export default function TravelPlanner() {
 
   const createSession = async () => {
     try {
+      // Check if there's a saved session in localStorage
+      const savedSessionId = localStorage.getItem('travel_session_id');
+      
+      if (savedSessionId) {
+        // Verify the session still exists on the backend
+        try {
+          const verifyResponse = await fetch(`http://localhost:5000/sessions/${savedSessionId}`);
+          if (verifyResponse.ok) {
+            setSessionId(savedSessionId);
+            toast({
+              title: "Session restored",
+              description: "Reconnected to your previous session.",
+            });
+            return;
+          }
+        } catch (error) {
+          // Session doesn't exist, create a new one
+          localStorage.removeItem('travel_session_id');
+        }
+      }
+      
+      // Create new session
       const response = await fetch('http://localhost:5000/sessions', {
         method: 'POST'
       });
       const data = await response.json();
       setSessionId(data.session_id);
+      
+      // Save to localStorage
+      localStorage.setItem('travel_session_id', data.session_id);
+      
       toast({
         title: "Session created",
         description: "Connected to the travel planning service.",
@@ -123,9 +150,9 @@ export default function TravelPlanner() {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     createSession();
-  });
+  }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
     try {
@@ -287,6 +314,54 @@ export default function TravelPlanner() {
     }
   };
 
+  const handleItineraryUpdate = (updatedItinerary: any[]) => {
+    if (!activeItinerary) return;
+    
+    const updatedItineraries = itineraries.map(itinerary => {
+      if (itinerary.id === activeItinerary) {
+        // Get the current day (or first day if no active day)
+        const targetDayIndex = activeDay 
+          ? itinerary.days.findIndex(d => d.id === activeDay)
+          : 0;
+        
+        return {
+          ...itinerary,
+          days: itinerary.days.map((day, index) => {
+            // Only update the active day
+            if (index === targetDayIndex) {
+              // Convert updated itinerary items to the correct format
+              const newItems = updatedItinerary
+                .filter(item => item.status !== 'cancelled')
+                .map((item, itemIndex) => ({
+                  id: `${item.name}-${Date.now()}-${itemIndex}`,
+                  title: item.name,
+                  location: item.location || '',
+                  time: item.time || '',
+                  description: item.description || '',
+                  type: item.type || 'activity',
+                  status: item.status
+                }));
+              
+              return {
+                ...day,
+                items: newItems
+              };
+            }
+            return day;
+          })
+        };
+      }
+      return itinerary;
+    });
+    
+    setItineraries(updatedItineraries);
+    
+    toast({
+      title: "Itinerary updated",
+      description: "Your itinerary has been adjusted based on your mood.",
+    });
+  };
+
   const renderMainContent = () => {
     switch (activeTab) {
       case 'map':
@@ -310,6 +385,34 @@ export default function TravelPlanner() {
               activeDay={activeDay}
               setActiveDay={setActiveDay}
             />
+          </Card>
+        );
+      case 'live-itinerary':
+        const currentItinerary = itineraries.find(i => i.id === activeItinerary);
+        const currentItineraryItems = currentItinerary?.days.flatMap(day => 
+          day.items.map(item => ({
+            time: item.time || '00:00',
+            name: item.title,
+            location: item.location || '',
+            description: item.description,
+            status: item.status || 'upcoming',
+            type: item.type
+          }))
+        ) || [];
+        
+        return (
+          <Card className="h-[calc(100vh-220px)] overflow-auto">
+            {sessionId ? (
+              <LiveItineraryView
+                sessionId={sessionId}
+                currentItinerary={currentItineraryItems}
+                onItineraryUpdate={handleItineraryUpdate}
+              />
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                <p>Connecting to session...</p>
+              </div>
+            )}
           </Card>
         );
       case 'bookings':
@@ -339,7 +442,7 @@ export default function TravelPlanner() {
         <div className="lg:col-span-12">
           <Card className="p-4">
             <div className="flex justify-between items-center">
-              <Tabs value={activeTab} className="w-[500px]" onValueChange={setActiveTab}>
+              <Tabs value={activeTab} className="w-[600px]" onValueChange={setActiveTab}>
                 <TabsList>
                   <TabsTrigger value="map">
                     <MapIcon className="h-4 w-4 mr-2" />
@@ -348,6 +451,10 @@ export default function TravelPlanner() {
                   <TabsTrigger value="itinerary">
                     <CalendarDays className="h-4 w-4 mr-2" />
                     Itinerary Board
+                  </TabsTrigger>
+                  <TabsTrigger value="live-itinerary">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Live Itinerary
                   </TabsTrigger>
                   <TabsTrigger value="bookings">
                     <Plane className="h-4 w-4 mr-2" />

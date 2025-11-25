@@ -226,16 +226,35 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
 
   // Parse coordinates from the backend response
   const parseCoordinates = (coordsStr: string) => {
+    if (!coordsStr || typeof coordsStr !== 'string') {
+      return undefined;
+    }
+
     try {
-      // Try to parse as JSON object first
-      const jsonMatch = coordsStr.match(/\{.*\}/);
-      if (jsonMatch) {
-        const coords = JSON.parse(jsonMatch[0]);
+      // If it's already an object with coordinates
+      if (typeof coordsStr === 'object' && coordsStr !== null) {
+        const coords = coordsStr as any;
         if (coords.latitude && coords.longitude) {
           return {
             longitude: parseFloat(coords.longitude),
             latitude: parseFloat(coords.latitude)
           };
+        }
+      }
+
+      // Try to parse as JSON object first
+      const jsonMatch = coordsStr.match(/\{[^{}]*"latitude"[^{}]*\}/);
+      if (jsonMatch) {
+        try {
+          const coords = JSON.parse(jsonMatch[0]);
+          if (coords.latitude && coords.longitude) {
+            return {
+              longitude: parseFloat(coords.longitude),
+              latitude: parseFloat(coords.latitude)
+            };
+          }
+        } catch (jsonError) {
+          // Continue to next parsing method
         }
       }
 
@@ -251,10 +270,23 @@ export default function ChatInterface({ onSearch, searchArea, suggestedPlaces }:
         }
       }
 
+      // Try to extract numbers directly from string
+      const numberMatches = coordsStr.match(/-?\d+\.?\d*/g);
+      if (numberMatches && numberMatches.length >= 2) {
+        const lat = parseFloat(numberMatches[0]);
+        const lng = parseFloat(numberMatches[1]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return {
+            longitude: lng,
+            latitude: lat
+          };
+        }
+      }
+
       // Fallback to returning undefined
       return undefined;
     } catch (e) {
-      console.error('Error parsing coordinates:', e);
+      console.error('Error parsing coordinates:', e, 'Input:', coordsStr);
       return undefined;
     }
   };

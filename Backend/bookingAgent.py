@@ -4,6 +4,7 @@ from phi.utils.pprint import pprint_run_response
 from phi.tools.duckduckgo import DuckDuckGo
 from dotenv import load_dotenv
 import os
+load_dotenv()
 class TravelOptionsFinder:
     def __init__(self):
         api_key_groq = os.getenv("GROQ_API_KEY")
@@ -39,7 +40,7 @@ class TravelOptionsFinder:
         self.context = {}
         
     def find_transportation_options(self, itinerary):
-        """Find best transportation options between destinations in the itinerary"""
+        """Find best transportation options from Pune to one of the destinations and also between destinations in the itinerary"""
         query = f"""Based on the following itinerary, search for and recommend the best transportation options (flights, trains, buses, etc.) between each destination:
         {itinerary}
         

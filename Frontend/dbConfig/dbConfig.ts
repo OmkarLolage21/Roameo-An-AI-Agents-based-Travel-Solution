@@ -1,8 +1,16 @@
 import mongoose from 'mongoose';
 
+let isConnected = false;
+
 export async function connect() {
+    if (isConnected) {
+        console.log('Already connected to MongoDB');
+        return;
+    }
+
     try {
-        mongoose.connect(process.env.MONGO_URI!);
+        await mongoose.connect(process.env.MONGO_URI!);
+        isConnected = true;
         const connection = mongoose.connection;
 
         connection.on('connected', () => {
@@ -11,11 +19,17 @@ export async function connect() {
 
         connection.on('error', (err) => {
             console.log('MongoDB connection error. Please make sure MongoDB is running. ' + err);
-            process.exit();
+            isConnected = false;
         })
-    } catch (error) {
-        console.log('Something goes wrong!');
-        console.log(error);
-        
+
+        connection.on('disconnected', () => {
+            console.log('MongoDB disconnected');
+            isConnected = false;
+        })
+    } catch (error: any) {
+        console.log('MongoDB connection failed!');
+        console.log(error.message);
+        isConnected = false;
+        throw new Error(`Database connection failed: ${error.message}`);
     }
 }
